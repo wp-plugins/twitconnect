@@ -8,7 +8,7 @@ Description: Integrate Twitter and Wordpress.  Provides single-signon and avatar
 Acknowledgments:  
   Adam Hupp  (email : adam at hupp.org / ahupp at facebook.com) - Facebook Plugin  
   Brooks Bennett (http://www.brooksskybennett.com/) - oAuth Popup
-Version: .6
+Version: .7
 ************************************************************************************
 M O D I F I C A T I O N S
 1. 03/23/2009 Shannon Whitley - Initial Release
@@ -39,7 +39,7 @@ There are two ways to display the button:
 //* Copy the config-sample.php file to config.php and modify the text there.
 //************************************************************************************
 $twc_template = <<<KEEPME
-<div id="twc_connect"><p><strong>Twtter Users!</strong><br />Enter your personal information below, or sign in with your Twitter account by clicking the button below.</p></div>
+<div id="twc_connect"><p><strong>Twitter Users!</strong><br />Enter your personal information below, or sign in with your Twitter account by clicking the button below.</p></div>
 KEEPME;
 if(file_exists(dirname(__FILE__).'/config.php'))
 {
