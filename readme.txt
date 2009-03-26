@@ -3,7 +3,7 @@ Contributors: swhitley
 Tags: Twitter, comments, login, single signon, avatar, claim
 Requires at least: 2.7.0
 Tested up to: 2.7.1
-Stable tag: .6
+Stable tag: .7
 
 Integrate Twitter and Wordpress.  Provides single-signon and avatars.
 
