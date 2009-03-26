@@ -8,7 +8,7 @@ Description: Integrate Twitter and Wordpress.  Provides single-signon and avatar
 Acknowledgments:  
   Adam Hupp  (email : adam at hupp.org / ahupp at facebook.com) - Facebook Plugin  
   Brooks Bennett (http://www.brooksskybennett.com/) - oAuth Popup
-Version: .5
+Version: .6
 ************************************************************************************
 M O D I F I C A T I O N S
 1. 03/23/2009 Shannon Whitley - Initial Release
