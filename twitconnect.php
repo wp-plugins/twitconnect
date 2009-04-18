@@ -8,10 +8,14 @@ Description: Integrate Twitter and Wordpress.  Provides single-signon and avatar
 Acknowledgments:  
   Adam Hupp  (email : adam at hupp.org / ahupp at facebook.com) - Facebook Plugin  
   Brooks Bennett (http://www.brooksskybennett.com/) - oAuth Popup
-Version: .7
+Version: .9
 ************************************************************************************
 M O D I F I C A T I O N S
 1. 03/23/2009 Shannon Whitley - Initial Release
+2. 04/16/2009 Shannon Whitley - Option to display Twitter url.  
+                                Display email address to encourage changing it.
+                                Button bookmark.
+                                Limit avatar display to Twitter subscribers.
 ************************************************************************************
 ************************************************************************************
 I N S T R U C T I O N S
@@ -23,7 +27,7 @@ There are two ways to display the button:
 1) Add the following code to your comment page where you want the button to appear:
 
     <!-- Begin Twit Connect -->
-    <?php twit_connect(); ?>
+    <?php if(function_exists('twit_connect')){twit_connect();} ?>
     <!-- End Twit Connect -->
 
 2) Or, simply allow this plugin to render the template where the code below 
@@ -39,13 +43,16 @@ There are two ways to display the button:
 //* Copy the config-sample.php file to config.php and modify the text there.
 //************************************************************************************
 $twc_template = <<<KEEPME
-<div id="twc_connect"><p><strong>Twitter Users!</strong><br />Enter your personal information below, or sign in with your Twitter account by clicking the button below.</p></div>
+<div id="twc_connect"><p><strong>Twitter Users!</strong><br />Enter your personal information in the form or sign in with your Twitter account by clicking the button below.</p></div>
 KEEPME;
 if(file_exists(dirname(__FILE__).'/config.php'))
 {
     include(dirname(__FILE__).'/config.php');
 }
 //************************************************************************************
+
+$twc_url = 'http://mytweeple.com';
+$twc_page = 'twc.aspx';
 
 add_action('init', 'twc_init');
 add_filter("get_avatar", "twc_get_avatar",10,4);
@@ -66,7 +73,12 @@ function twit_connect()
 
 function twc_show_twit_connect_button($id='0')
 {
-    global $twc_loaded, $twc_template;
+    global $twc_url,$twc_page,$twc_loaded, $twc_template, $user_email;
+
+    if(is_user_logged_in())
+    {
+        echo '<p>Your email address is '.'<a name="twcbutton" href="'.get_option('siteurl').'/wp-admin/profile.php">'.$user_email.'</a>.</p>';
+    }
 
     if($twc_loaded || is_user_logged_in())
     {
@@ -101,7 +113,7 @@ function twc_show_twit_connect_button($id='0')
         var button = document.createElement("button");
         button.id = "twc_button";
         button.setAttribute("class","btn");
-        button.onclick = function(){window.open("http://mytweeple.com/twc.aspx?a="+escape(location.href), "twcWindow","width=800,height=400,left=150,top=100,scrollbar=no,resize=no");return false;};
+        button.onclick = function(){window.open("'.$twc_url.'/'.$twc_page.'?a="+escape(location.href+"#twcbutton"), "twcWindow","width=800,height=400,left=150,top=100,scrollbar=no,resize=no");return false;};
         button.innerHTML = "<img src=\'http://s3.amazonaws.com/static.whitleymedia/twitconnect.png\' style=\'margin:0;\'>";
         document.getElementById("twc_connect").appendChild(button);}</script>';
 
@@ -126,15 +138,15 @@ function twc_get_avatar($avatar, $id_or_email='',$size='32') {
 
   if(is_object($comment))
   {
-      $id_or_email = $comment;
+      $id_or_email = $comment->user_id;
   }
 
-  if (!is_object($id_or_email)) {
-    return $avatar;
+  if (is_object($id_or_email)) {
+     $id_or_email = $id_or_email->user_id;
   }
 
-  if ($id_or_email->user_id > 0) {
-    $user_info = get_userdata($id_or_email->user_id);
+  if (get_usermeta($id_or_email, 'twcid')) {
+    $user_info = get_userdata($id_or_email);
     $out = 'http://purl.org/net/spiurl/'.$user_info->user_login;
     $avatar = "<img alt='' src='{$out}' class='avatar avatar-{$size}' height='{$size}' width='{$size}' />";
     return $avatar;
@@ -147,6 +159,7 @@ function twc_get_avatar($avatar, $id_or_email='',$size='32') {
 
 function twc_TwitterInfoGet($req_key)
 {
+    global $twc_url,$twc_page;
 
     if ( !class_exists('Snoopy') ) {
         include_once( ABSPATH . WPINC . '/class-snoopy.php' );
@@ -156,7 +169,7 @@ function twc_TwitterInfoGet($req_key)
     $snoopy->agent = 'Twit Connect (Snoopy)';
     $snoopy->host = $_SERVER[ 'HTTP_HOST' ];
     $snoopy->read_timeout = "180";
-    $url = 'http://www.mytweeple.com/twc.aspx?twc_req_key='.urlencode($req_key);
+    $url = $twc_url.'/'.$twc_page.'?twc_req_key='.urlencode($req_key);
 
     if(@$snoopy->fetchtext($url))
     {
@@ -172,17 +185,27 @@ function twc_TwitterInfoGet($req_key)
 
 
 function twc_Login($pdvUserinfo) {
+  global $twc_use_twitter_profile;
+
   $userinfo = explode('|',$pdvUserinfo);
   if(count($userinfo) < 4)
   {
       wp_die("An error occurred while trying to contact Twit Connect.");
   }
 
+  //Use the url from the Twitter profile.
+  $user_url = $userinfo[3];
+  if($twc_use_twitter_profile == 'Y')
+  {
+      //Use the Twitter profile.
+      $user_url = 'http://twitter.com/'.$userinfo[1];
+  }
+
   $userdata = array(
     'user_pass' => wp_generate_password(),
     'user_login' => $userinfo[1],
     'display_name' => $userinfo[2],
-    'user_url' => $userinfo[3],
+    'user_url' => $user_url,
     'user_email' => 'nomail@nomail.com'
   );
 
