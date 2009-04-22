@@ -3,7 +3,7 @@ Contributors: swhitley
 Tags: Twitter, comments, login, single signon, avatar, claim
 Requires at least: 2.7.0
 Tested up to: 2.7.1
-Stable tag: 1.0
+Stable tag: 1.02
 
 Integrate Twitter and Wordpress.  Provides single-signon and avatars.
 
@@ -14,3 +14,16 @@ Integrate Twitter and Wordpress.  Provides single-signon and avatars.
 1. Place `<?php if(function_exists('twit_connect')){twit_connect();} ?>` in your comment template or rely on the default `<?php do_action('comment_form', $post->ID); ?>` code.
 1. Activate the plugin through the 'Plugins' menu in WordPress.
 1. Modify plugin options through the `Settings` menu.
+
+== Change Log ==
+
+1.02
+
+04/21/2009 Shannon Whitley   PHP 5 required for Epi.
+
+
+1.0
+
+04/20/2009 Shannon Whitley   Config Page
+                             Local oAuth Processing
+                             Button image selection
