@@ -3,14 +3,14 @@
 Plugin Name: Twit Connect
 Author:  Shannon Whitley 
 Author URI: http://voiceoftech.com/swhitley/
-Plugin URI: http://www.voiceoftech.com/swhitley/?p=683
-Description: Integrate Twitter and Wordpress.  Provides single-signon and avatars.
+Plugin URI: http://www.voiceoftech.com/swhitley/?page_id=706
+Description: Integrate Twitter and Wordpress.  Provides single-signon using oAuth and displays Twitter avatars.
 Acknowledgments:  
   Adam Hupp  (email : adam at hupp.org / ahupp at facebook.com) - Facebook Plugin  
   Brooks Bennett (http://www.brooksskybennett.com/) - oAuth Popup
   Peter Denton (http://twibs.com/oAuthButtons.php) - 'Signin with Twitter' button
   Jaisen Mathai (http://www.jaisenmathai.com/blog/) - EpiOAuth
-Version: 1.0
+Version: 1.02
 ************************************************************************************
 M O D I F I C A T I O N S
 1. 03/23/2009 Shannon Whitley - Initial Release
@@ -21,6 +21,7 @@ M O D I F I C A T I O N S
 3. 04/20/2009 Shannon Whitley   Config Page
                                 Local oAuth Processing
                                 Button image selection
+4. 04/21/2009 Shannon Whitley   PHP 5 required for Epi.
 ************************************************************************************
 ************************************************************************************
 I N S T R U C T I O N S
@@ -43,12 +44,13 @@ There are two ways to display the button:
 ************************************************************************************
 */
 
-
-
-include dirname(__FILE__).'/EpiCurl.php';
-include dirname(__FILE__).'/EpiOAuth.php';
-include dirname(__FILE__).'/EpiTwitter.php';
-include dirname(__FILE__).'/secret.php';
+if(!version_compare(PHP_VERSION, '5.0.0', '<'))
+{
+    include dirname(__FILE__).'/EpiCurl.php';
+    include dirname(__FILE__).'/EpiOAuth.php';
+    include dirname(__FILE__).'/EpiTwitter.php';
+    include dirname(__FILE__).'/secret.php';
+}
 
 
 //************************************************************************************
@@ -341,7 +343,14 @@ function twitconnect_configuration()
 			update_option('twc_consumer_key', stripslashes($_POST["twc_consumer_key"]) );
 			update_option('twc_consumer_secret', stripslashes($_POST["twc_consumer_secret"]) );
                         update_option('twc_btn_choice', $_POST["twc_btn_choice"]);
-                        update_option('twc_local', $_POST["twc_local"]);
+                        if(!version_compare(PHP_VERSION, '5.0.0', '<'))
+                        {
+                              update_option('twc_local', $_POST["twc_local"]);
+                        }
+                        else
+                        {
+                              wp_die('PHP 5 or greater is required to run Self-Hosted oAuth.');
+                        }
                         update_option('twc_template', stripslashes($_POST["twc_template"]));
                         update_option('twc_use_twitter_profile', $_POST["twc_use_twitter_profile"]);
                         $secret_file = dirname(__FILE__).'/secret.php';
@@ -386,7 +395,7 @@ function twitconnect_configuration()
         <td valign="top">Self-Hosted oAuth</td>
         <td>
           <input type='checkbox' name='twc_local' value='Y' 
-            <?php echo $twc_local ?>/>
+            <?php echo $twc_local ?>/> (PHP 5 required)
             <br/><small>Check this box to use your own Consumer Key and Consumer Secret.</small>
             <br/><small>For this option, you must register a new application at <a href="http://twitter.com/oauth/">Twitter.com</a></small>
           </td>
