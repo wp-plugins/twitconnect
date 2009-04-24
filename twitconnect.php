@@ -10,7 +10,7 @@ Acknowledgments:
   Brooks Bennett (http://www.brooksskybennett.com/) - oAuth Popup
   Peter Denton (http://twibs.com/oAuthButtons.php) - 'Signin with Twitter' button
   Jaisen Mathai (http://www.jaisenmathai.com/blog/) - EpiOAuth
-Version: 1.02
+Version: 1.05
 ************************************************************************************
 M O D I F I C A T I O N S
 1. 03/23/2009 Shannon Whitley - Initial Release
@@ -22,6 +22,8 @@ M O D I F I C A T I O N S
                                 Local oAuth Processing
                                 Button image selection
 4. 04/21/2009 Shannon Whitley   PHP 5 required for Epi.
+5. 04/24/2009 Shannon Whitley   Workaround for removal of oauth_callback.
+                                Removed the closeme.php page.
 ************************************************************************************
 ************************************************************************************
 I N S T R U C T I O N S
@@ -107,6 +109,7 @@ add_action('init', 'twc_init');
 add_filter("get_avatar", "twc_get_avatar",10,4);
 add_action('comment_form', 'twc_show_twit_connect_button');
 add_action("admin_menu", "twc_config_page");
+add_action("wp_head", "twc_wp_head");
 
 $twc_loaded = false;
 
@@ -119,6 +122,17 @@ function twit_connect()
     }
     twc_show_twit_connect_button();
     $twc_loaded = true;
+}
+
+function twc_wp_head()
+{
+    if(is_user_logged_in())
+    {
+        if(isset($_GET['oauth_token']))
+        {
+            echo '<script type="text/javascript">window.opener.twc_bookmark("");window.close();</script>';
+        }  
+    }
 }
 
 function twc_show_twit_connect_button($id='0')
@@ -158,6 +172,14 @@ function twc_show_twit_connect_button($id='0')
     echo $twc_template;
 
     echo '<script type="text/javascript">
+    function twc_bookmark(){
+       var url=location.href;
+       var temp = url.split("#");
+       url = temp[0];
+       url += "#twcbutton";
+       location.href = url;
+       location.reload();
+    }
     if(document.getElementById("twc_connect"))
     {
         var button = document.createElement("button");
