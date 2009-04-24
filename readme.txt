@@ -3,7 +3,7 @@ Contributors: swhitley
 Tags: Twitter, comments, login, single signon, avatar, claim
 Requires at least: 2.7.0
 Tested up to: 2.7.1
-Stable tag: 1.02
+Stable tag: 1.05
 
 Integrate Twitter and Wordpress.  Provides single-signon and avatars.
 
@@ -17,13 +17,25 @@ Integrate Twitter and Wordpress.  Provides single-signon and avatars.
 
 == Change Log ==
 
+1.05
+
+04/24/2009 Shannon Whitley   
+
+- Workaround for removal of oauth_callback.
+- Removed the closeme.php page.
+
+
 1.02
 
-04/21/2009 Shannon Whitley   PHP 5 required for Epi.
+04/21/2009 Shannon Whitley   
+
+- PHP 5 required for Epi.
 
 
 1.0
 
-04/20/2009 Shannon Whitley   Config Page
-                             Local oAuth Processing
-                             Button image selection
+04/20/2009 Shannon Whitley   
+
+- Config Page
+- Local oAuth Processing
+- Button image selection
