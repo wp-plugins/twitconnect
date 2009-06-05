@@ -10,7 +10,8 @@ Acknowledgments:
   Brooks Bennett (http://www.brooksskybennett.com/) - oAuth Popup
   Peter Denton (http://twibs.com/oAuthButtons.php) - 'Signin with Twitter' button
   Jaisen Mathai (http://www.jaisenmathai.com/blog/) - EpiOAuth
-Version: 1.05
+  Alexander Morris (http://www.vlogolution.com) - Unique account fix
+Version: 1.06
 ************************************************************************************
 M O D I F I C A T I O N S
 1. 03/23/2009 Shannon Whitley - Initial Release
@@ -24,6 +25,10 @@ M O D I F I C A T I O N S
 4. 04/21/2009 Shannon Whitley   PHP 5 required for Epi.
 5. 04/24/2009 Shannon Whitley   Workaround for removal of oauth_callback.
                                 Removed the closeme.php page.
+6. 06/02/2009 Shannon Whitley   Separately identify Twitter accounts using a suffix.
+                                Check for existing user prior to add.
+                                Change the user name if changed on Twitter.
+                                New button image.
 ************************************************************************************
 ************************************************************************************
 I N S T R U C T I O N S
@@ -81,6 +86,7 @@ if(strlen($twc_use_twitter_profile_temp) > 0)
 
 //************************************************************************************
 $twc_local = get_option("twc_local");
+$twc_user_login_suffix = get_option("twc_user_login_suffix");
 $twc_btn_choice = get_option("twc_btn_choice");
 
 if($twc_local == 'Y')
@@ -98,12 +104,18 @@ else
 
 $twc_btn_image1 = "http://s3.amazonaws.com/static.whitleymedia/twitconnect.png";
 $twc_btn_image2 = "http://s3.amazonaws.com/static.whitleymedia/twitter_button_1_lo.gif";
+$twc_btn_image3 = "http://s3.amazonaws.com/static.whitleymedia/twitter_signin.png";
 
 $twc_btn_image = $twc_btn_image1;
 if($twc_btn_choice == '2')
 {
    $twc_btn_image = $twc_btn_image2;
 }
+if($twc_btn_choice == '3')
+{
+   $twc_btn_image = $twc_btn_image3;
+}
+
 
 add_action('init', 'twc_init');
 add_filter("get_avatar", "twc_get_avatar",10,4);
@@ -210,7 +222,7 @@ function twc_init()
 }
 
 function twc_get_avatar($avatar, $id_or_email='',$size='32') {
-  global $comment;
+  global $comment, $twc_user_login_suffix;
 
   if(is_object($comment))
   {
@@ -223,7 +235,7 @@ function twc_get_avatar($avatar, $id_or_email='',$size='32') {
 
   if (get_usermeta($id_or_email, 'twcid')) {
     $user_info = get_userdata($id_or_email);
-    $out = 'http://purl.org/net/spiurl/'.$user_info->user_login;
+    $out = 'http://purl.org/net/spiurl/'. str_replace($twc_user_login_suffix,"",$user_info->user_login);
     $avatar = "<img alt='' src='{$out}' class='avatar avatar-{$size}' height='{$size}' width='{$size}' />";
     return $avatar;
   } else {
@@ -262,6 +274,7 @@ function twc_TwitterInfoGet($req_key)
 function twc_EpiConfirm()
 {
     global $consumer_key, $consumer_secret;
+    
     $twitterObj = new EpiTwitter($consumer_key, $consumer_secret);
 
     $twitterObj->setToken($_GET['oauth_token']);
@@ -271,17 +284,19 @@ function twc_EpiConfirm()
     $twitterInfo->response;
    
     twc_Login($twitterInfo->id.'|'.$twitterInfo->screen_name.'|'.$twitterInfo->name.'|'.$twitterInfo->url);
-   
 }
 
 function twc_Login($pdvUserinfo) {
-  global $twc_use_twitter_profile;
+  global $wpdb, $twc_use_twitter_profile, $twc_user_login_suffix;
 
   $userinfo = explode('|',$pdvUserinfo);
   if(count($userinfo) < 4)
   {
       wp_die("An error occurred while trying to contact Twit Connect.");
   }
+  
+  //User login
+  $user_login_n_suffix = $userinfo[1].$twc_user_login_suffix;
 
   //Use the url from the Twitter profile.
   $user_url = $userinfo[3];
@@ -294,7 +309,7 @@ function twc_Login($pdvUserinfo) {
 
   $userdata = array(
     'user_pass' => wp_generate_password(),
-    'user_login' => $userinfo[1],
+    'user_login' => $user_login_n_suffix,
     'display_name' => $userinfo[2],
     'user_url' => $user_url,
     'user_email' => 'nomail@nomail.com'
@@ -307,24 +322,49 @@ function twc_Login($pdvUserinfo) {
   
   $wpuid = twc_twitteruser_to_wpuser($userinfo[0]);
   
-
   if(!$wpuid)
   {
-      $wpuid = wp_insert_user($userdata);
-      if($wpuid)
+      if (!username_exists($user_login_n_suffix))
       {
-         update_usermeta($wpuid, 'twcid', "$userinfo[0]");
+        $wpuid = wp_insert_user($userdata);
+        if($wpuid)
+        {
+            update_usermeta($wpuid, 'twcid', "$userinfo[0]");
+        }
+      }
+      else
+      {
+        wp_die('User name '.$user_login_n_suffix.' cannot be added.  It already exists.');
       }
   }
   else
   {
-    $userdata = array(
-    'ID' => $wpuid,
-    'user_login' => $userinfo[1],
-    'display_name' => $userinfo[2],
-    'user_url' => $userinfo[3],
-    );
-    wp_update_user( $userdata );
+    $user_obj = get_userdata($wpuid);
+    
+    if($user_obj->display_name != $userinfo[2] || $user_obj->user_url != $userinfo[3])
+    {
+        $userdata = array(
+        'ID' => $wpuid,
+        'display_name' => $userinfo[2],
+        'user_url' => $userinfo[3],
+        );
+        wp_update_user( $userdata );
+    }
+    if($user_obj->user_login != $user_login_n_suffix)
+    {
+        if (!username_exists($user_login_n_suffix))
+        {
+            $q = sprintf( "UPDATE %s SET user_login='%s' WHERE ID=%d", 
+                $wpdb->users, $user_login_n_suffix, (int) $wpuid );
+		    if (false !== $wpdb->query($q)){
+		        update_usermeta( $wpuid, 'nickname', $user_login_n_suffix );
+		    }
+		}
+        else
+        {
+          wp_die('User name '.$user_login_n_suffix.' cannot be added.  It already exists.');
+        }
+    }
   }
   
   if($wpuid) {
@@ -357,7 +397,7 @@ function twc_config_page()
 //*****************************************************************************
 function twitconnect_configuration()
 {
-        global $twc_btn_image1, $twc_btn_image2, $twc_template;
+        global $twc_btn_image1, $twc_btn_image2, $twc_btn_image3, $twc_template;
 
 		// Save Options
 		if (isset($_POST["twc_save"])) {
@@ -375,6 +415,7 @@ function twitconnect_configuration()
                         }
                         update_option('twc_template', stripslashes($_POST["twc_template"]));
                         update_option('twc_use_twitter_profile', $_POST["twc_use_twitter_profile"]);
+                        update_option('twc_user_login_suffix', $_POST["twc_user_login_suffix"]);
                         $secret_file = dirname(__FILE__).'/secret.php';
                         $fh = fopen($secret_file, 'w') or die("Can't open secret file");
                         $stringData = '<?php'."\n";
@@ -390,6 +431,7 @@ function twitconnect_configuration()
 		$twc_consumer_secret = get_option('twc_consumer_secret');
                 $twc_btn_choice = get_option('twc_btn_choice');
                 $twc_local = get_option('twc_local');
+                $twc_user_login_suffix = get_option('twc_user_login_suffix');                                
                 $twc_template_temp = $twc_template;
                 $twc_template = get_option('twc_template');
                 if(strlen($twc_template) == 0)
@@ -408,6 +450,8 @@ function twitconnect_configuration()
 			"checked='true'" : "";
 		$btn2 = $twc_btn_choice == '2' ?
 			"checked='true'" : "";
+		$btn3 = $twc_btn_choice == '3' ?
+			"checked='true'" : "";			
 
 ?>
     <h3>Twit Connect Configuration</h3>
@@ -417,9 +461,11 @@ function twitconnect_configuration()
         <td valign="top">Self-Hosted oAuth</td>
         <td>
           <input type='checkbox' name='twc_local' value='Y' 
-            <?php echo $twc_local ?>/> (PHP 5 required)
+            <?php echo $twc_local ?>/>  Self-Hosted oAuth requires <strong>PHP 5</strong>.
             <br/><small>Check this box to use your own Consumer Key and Consumer Secret.</small>
             <br/><small>For this option, you must register a new application at <a href="http://twitter.com/oauth/">Twitter.com</a></small>
+            <br/><small>Help in filling out the registration can be found on the <a href="http://www.voiceoftech.com/swhitley/?page_id=706">Twit Connect</a> page.</small>
+            
           </td>
         </tr>
         <tr>
@@ -442,12 +488,25 @@ function twitconnect_configuration()
           </td>
         </tr>
         <tr>
+          <td width="20%" valign="top">Twitter Login Suffix</td>
+          <td>
+            <input type='text' name='twc_user_login_suffix' value='<?php echo $twc_user_login_suffix ?>' size="20" /> [Once set, do not change.]
+                 <br/><small>
+                  (Recommended) Add a suffix to all Twitter logins to keep them separate<br/>from other logins.
+                  <br/><br/>Example: Enter <strong>@twitter</strong> into the box above.  The next Twitter account<br/>
+                  created on your blog will be {user name}@twitter.
+                </small>
+          </td>
+        </tr>
+        <tr>
         <td valign="top">Select a Button</td>
         <td>
           <input type='radio' name='twc_btn_choice' value='1' 
             <?php echo $btn1 ?>/> <img src="<? echo $twc_btn_image1 ?>" /><br/><br/>
           <input type='radio' name='twc_btn_choice' value='2' 
-            <?php echo $btn2 ?>/> <img src="<? echo $twc_btn_image2 ?>" />
+            <?php echo $btn2 ?>/> <img src="<? echo $twc_btn_image2 ?>" /><br/><br/>
+          <input type='radio' name='twc_btn_choice' value='3' 
+            <?php echo $btn3 ?>/> <img src="<? echo $twc_btn_image3 ?>" />
           </td>
         </tr>
         <tr>
@@ -468,7 +527,7 @@ function twitconnect_configuration()
         </tr>
       </table>
       <p class="submit">
-        <input type='submit' name='twc_save' value='Save Settings' />
+        <input class="button-primary" type='submit' name='twc_save' value='Save Settings' />
       </p>
     </form>
 <?php

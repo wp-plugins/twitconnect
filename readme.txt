@@ -3,7 +3,7 @@ Contributors: swhitley
 Tags: Twitter, comments, login, single signon, avatar, claim
 Requires at least: 2.7.0
 Tested up to: 2.7.1
-Stable tag: 1.05
+Stable tag: 1.06
 
 Integrate Twitter and Wordpress.  Provides single-signon and avatars.
 
@@ -16,6 +16,16 @@ Integrate Twitter and Wordpress.  Provides single-signon and avatars.
 1. Modify plugin options through the `Settings` menu.
 
 == Change Log ==
+
+1.06
+
+06/05/2009 Shannon Whitley   
+
+- Separately identify Twitter accounts using a suffix.
+- Check for existing user prior to add.
+- Change the user name if changed on Twitter.
+- New button image.
+
 
 1.05
 
