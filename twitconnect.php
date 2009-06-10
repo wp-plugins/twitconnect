@@ -11,7 +11,7 @@ Acknowledgments:
   Peter Denton (http://twibs.com/oAuthButtons.php) - 'Signin with Twitter' button
   Jaisen Mathai (http://www.jaisenmathai.com/blog/) - EpiOAuth
   Alexander Morris (http://www.vlogolution.com) - Unique account fix
-Version: 1.06
+Version: 1.07
 ************************************************************************************
 M O D I F I C A T I O N S
 1. 03/23/2009 Shannon Whitley - Initial Release
@@ -29,6 +29,7 @@ M O D I F I C A T I O N S
                                 Check for existing user prior to add.
                                 Change the user name if changed on Twitter.
                                 New button image.
+7. 06/09/2009 Shannon Whitley   Bug fix for suffix not initialized.                             
 ************************************************************************************
 ************************************************************************************
 I N S T R U C T I O N S
@@ -87,6 +88,12 @@ if(strlen($twc_use_twitter_profile_temp) > 0)
 //************************************************************************************
 $twc_local = get_option("twc_local");
 $twc_user_login_suffix = get_option("twc_user_login_suffix");
+if(empty($twc_user_login_suffix))
+{
+    $twc_user_login_suffix = '@twitter';
+    update_option('twc_user_login_suffix', $twc_user_login_suffix);
+}
+
 $twc_btn_choice = get_option("twc_btn_choice");
 
 if($twc_local == 'Y')
