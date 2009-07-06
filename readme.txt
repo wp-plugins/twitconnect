@@ -2,8 +2,8 @@
 Contributors: swhitley
 Tags: Twitter, comments, login, single signon, avatar, claim
 Requires at least: 2.7.0
-Tested up to: 2.7.1
-Stable tag: 1.07
+Tested up to: 2.8
+Stable tag: 1.1
 
 Integrate Twitter and Wordpress.  Provides single-signon and avatars.
 
@@ -15,7 +15,20 @@ Integrate Twitter and Wordpress.  Provides single-signon and avatars.
 1. Activate the plugin through the 'Plugins' menu in WordPress.
 1. Modify plugin options through the `Settings` menu.
 
+
+Changes in Version 1.1
+
+- Twit Connect can optionally appear on the login page.
+
+
 == Change Log ==
+
+1.1
+
+07/06/2009 Shannon Whitley
+
+- Twit Connect can optionally appear on the login page.
+
 
 1.06
 

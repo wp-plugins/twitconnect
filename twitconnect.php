@@ -11,7 +11,7 @@ Acknowledgments:
   Peter Denton (http://twibs.com/oAuthButtons.php) - 'Signin with Twitter' button
   Jaisen Mathai (http://www.jaisenmathai.com/blog/) - EpiOAuth
   Alexander Morris (http://www.vlogolution.com) - Unique account fix
-Version: 1.07
+Version: 1.1
 ************************************************************************************
 M O D I F I C A T I O N S
 1. 03/23/2009 Shannon Whitley - Initial Release
@@ -30,11 +30,10 @@ M O D I F I C A T I O N S
                                 Change the user name if changed on Twitter.
                                 New button image.
 7. 06/09/2009 Shannon Whitley   Bug fix for suffix not initialized.                             
+8. 07/06/2009 Shannon Whitley   Twit Connect can optionally appear on the login page.
 ************************************************************************************
 ************************************************************************************
 I N S T R U C T I O N S
-
-Modify the Twit Connect template in the config.php file.
 
 There are two ways to display the button:
 
@@ -63,15 +62,21 @@ if(!version_compare(PHP_VERSION, '5.0.0', '<'))
 
 //************************************************************************************
 //* Button Template - This is the default.
-//* Copy the config-sample.php file to config.php and modify the text there.
 //************************************************************************************
 $twc_template = <<<KEEPME
-<div id="twc_connect"><p><strong>Twitter Users!</strong><br />Enter your personal information in the form or sign in with your Twitter account by clicking the button below.</p></div>
+<div id="twc_connect"><p><strong>Twitter Users</strong><br />Enter your personal information in the form or sign in with your Twitter account by clicking the button below.</p></div>
 KEEPME;
-if(file_exists(dirname(__FILE__).'/config.php'))
+
+$twc_login_text = <<<KEEPME2
+<div id="twc_connect"><p><strong>Twitter Users</strong><br />Register or Login using your Twitter account by clicking the button below.</p></div><br/></br>
+KEEPME2;
+
+$twc_login_text_temp = get_option("twc_login_text");
+if(strlen($twc_login_text_temp) > 0)
 {
-    include(dirname(__FILE__).'/config.php');
+    $twc_login_text = $twc_login_text_temp;
 }
+
 $twc_template_temp = get_option("twc_template");
 if(strlen($twc_template_temp) > 0)
 {
@@ -100,7 +105,7 @@ if($twc_local == 'Y')
 {
     $twc_url = WP_PLUGIN_URL.'/twitconnect';
     $twc_page = 'start.php';
-    $twc_a = '"'.$twc_url.'/closeme.php"';
+    $twc_a = '';
 }
 else
 {
@@ -129,6 +134,10 @@ add_filter("get_avatar", "twc_get_avatar",10,4);
 add_action('comment_form', 'twc_show_twit_connect_button');
 add_action("admin_menu", "twc_config_page");
 add_action("wp_head", "twc_wp_head");
+if(get_option('twc_add_to_login_page') == 'Y')
+{
+    add_action('login_form', 'twc_login_form');
+}
 
 $twc_loaded = false;
 
@@ -143,6 +152,12 @@ function twit_connect()
     $twc_loaded = true;
 }
 
+function twc_login_form()
+{
+    twc_show_twit_connect_button(0,'login');
+}
+
+
 function twc_wp_head()
 {
     if(is_user_logged_in())
@@ -154,13 +169,20 @@ function twc_wp_head()
     }
 }
 
-function twc_show_twit_connect_button($id='0')
+function twc_show_twit_connect_button($id='0',$type='comment')
 {
-    global $twc_url,$twc_page,$twc_loaded, $twc_template, $user_email, $twc_btn_image, $twc_a;
+    global $twc_url,$twc_page,$twc_loaded, $twc_template, $twc_login_text, $user_email, $twc_btn_image, $twc_a;
 
     if(is_user_logged_in())
     {
-        echo '<p>Your email address is '.'<a name="twcbutton" href="'.get_option('siteurl').'/wp-admin/profile.php">'.$user_email.'</a>.</p>';
+        if($type='login')
+        {
+            wp_redirect('wp-admin/index.php');
+        }
+        else
+        {
+            echo '<p>Your email address is '.'<a name="twcbutton" href="'.get_option('siteurl').'/wp-admin/profile.php">'.$user_email.'</a>.</p>';
+        }
     }
 
     if($twc_loaded || is_user_logged_in())
@@ -188,7 +210,14 @@ function twc_show_twit_connect_button($id='0')
         height:16px;}
     </style>';
 
-    echo $twc_template;
+    if($type == 'login')
+    {
+        echo $twc_login_text;
+    }
+    else
+    {
+        echo $twc_template;
+    }
 
     echo '<script type="text/javascript">
     function twc_bookmark(){
@@ -404,61 +433,65 @@ function twc_config_page()
 //*****************************************************************************
 function twitconnect_configuration()
 {
-        global $twc_btn_image1, $twc_btn_image2, $twc_btn_image3, $twc_template;
+        global $twc_btn_image1, $twc_btn_image2, $twc_btn_image3, $twc_template, $twc_login_text;
 
 		// Save Options
 		if (isset($_POST["twc_save"])) {
 			// ...the options are updated.
 			update_option('twc_consumer_key', stripslashes($_POST["twc_consumer_key"]) );
 			update_option('twc_consumer_secret', stripslashes($_POST["twc_consumer_secret"]) );
-                        update_option('twc_btn_choice', $_POST["twc_btn_choice"]);
-                        if(!version_compare(PHP_VERSION, '5.0.0', '<'))
-                        {
-                              update_option('twc_local', $_POST["twc_local"]);
-                        }
-                        else
-                        {
-                              wp_die('PHP 5 or greater is required to run Self-Hosted oAuth.');
-                        }
-                        update_option('twc_template', stripslashes($_POST["twc_template"]));
-                        update_option('twc_use_twitter_profile', $_POST["twc_use_twitter_profile"]);
-                        update_option('twc_user_login_suffix', $_POST["twc_user_login_suffix"]);
-                        $secret_file = dirname(__FILE__).'/secret.php';
-                        $fh = fopen($secret_file, 'w') or die("Can't open secret file");
-                        $stringData = '<?php'."\n";
-                        $stringData .= '$consumer_key = \''.stripslashes($_POST["twc_consumer_key"]).'\';'."\n";
-                        $stringData .= '$consumer_secret = \''.stripslashes($_POST["twc_consumer_secret"]).'\';'."\n";
-                        $stringData .= '?>'."\n";
-                        fwrite($fh, $stringData);
-                        fclose($fh);
+            update_option('twc_btn_choice', $_POST["twc_btn_choice"]);
+            if(!version_compare(PHP_VERSION, '5.0.0', '<'))
+            {
+                  update_option('twc_local', $_POST["twc_local"]);
+            }
+            else
+            {
+                  wp_die('PHP 5 or greater is required to run Self-Hosted oAuth.');
+            }
+            update_option('twc_template', stripslashes($_POST["twc_template"]));
+            update_option('twc_use_twitter_profile', $_POST["twc_use_twitter_profile"]);
+            update_option('twc_add_to_login_page', $_POST["twc_add_to_login_page"]);            
+            update_option('twc_user_login_suffix', $_POST["twc_user_login_suffix"]);
+            $secret_file = dirname(__FILE__).'/secret.php';
+            $fh = fopen($secret_file, 'w') or die("Can't open secret file");
+            $stringData = '<?php'."\n";
+            $stringData .= '$consumer_key = \''.stripslashes($_POST["twc_consumer_key"]).'\';'."\n";
+            $stringData .= '$consumer_secret = \''.stripslashes($_POST["twc_consumer_secret"]).'\';'."\n";
+            $stringData .= '?>'."\n";
+            fwrite($fh, $stringData);
+            fclose($fh);
 		}
 		
 		// Get the Data
 		$twc_consumer_key = get_option('twc_consumer_key');
 		$twc_consumer_secret = get_option('twc_consumer_secret');
-                $twc_btn_choice = get_option('twc_btn_choice');
-                $twc_local = get_option('twc_local');
-                $twc_user_login_suffix = get_option('twc_user_login_suffix');                                
-                $twc_template_temp = $twc_template;
-                $twc_template = get_option('twc_template');
-                if(strlen($twc_template) == 0)
-                {
-                    $twc_template = $twc_template_temp;
-                }
-                $twc_use_twitter_profile = get_option('twc_use_twitter_profile');
+        $twc_btn_choice = get_option('twc_btn_choice');
+        $twc_local = get_option('twc_local');
+        $twc_user_login_suffix = get_option('twc_user_login_suffix');                                
+        $twc_template_temp = $twc_template;
+        $twc_template = get_option('twc_template');
+        if(strlen($twc_template) == 0)
+        {
+            $twc_template = $twc_template_temp;
+        }
+        $twc_use_twitter_profile = get_option('twc_use_twitter_profile');
+        $twc_use_twitter_profile = $twc_use_twitter_profile == 'Y' ?
+    	"checked='true'" : "";
+    	
+        $twc_add_to_login_page = get_option('twc_add_to_login_page');
+        $twc_add_to_login_page = $twc_add_to_login_page == 'Y' ?
+    	"checked='true'" : "";
 
-                $twc_use_twitter_profile = $twc_use_twitter_profile == 'Y' ?
-			"checked='true'" : "";
-
-                $twc_local = $twc_local == 'Y' ?
-			"checked='true'" : "";
+        $twc_local = $twc_local == 'Y' ?
+	    "checked='true'" : "";
 		
-                $btn1 = $twc_btn_choice == '1' ?
-			"checked='true'" : "";
-		$btn2 = $twc_btn_choice == '2' ?
-			"checked='true'" : "";
-		$btn3 = $twc_btn_choice == '3' ?
-			"checked='true'" : "";			
+        $btn1 = $twc_btn_choice == '1' ?
+            "checked='true'" : "";
+        $btn2 = $twc_btn_choice == '2' ?
+            "checked='true'" : "";
+        $btn3 = $twc_btn_choice == '3' ?
+            "checked='true'" : "";			
 
 ?>
     <h3>Twit Connect Configuration</h3>
@@ -530,6 +563,22 @@ function twitconnect_configuration()
             <textarea name='twc_template' rows="5" cols="50"><?php echo $twc_template; ?></textarea>
             <br/>
             <small>The text that appears above the Twit Connect button.</small>
+          </td>
+        </tr>
+   <tr>
+          <td valign="top">Add to Login Page</td>
+          <td>
+          <input type='checkbox' name='twc_add_to_login_page' value='Y' 
+            <?php echo $twc_add_to_login_page ?>/>
+            <br/><small>Check this box if you would like the Twit Connect button to appear on the WordPress login page.</small>
+          </td>
+        </tr>
+   <tr>
+          <td valign="top">Login Text</td>
+          <td>
+            <textarea name='twc_login_text' rows="5" cols="50"><?php echo $twc_login_text; ?></textarea>
+            <br/>
+            <small>The text that appears above the Twit Connect button on the login page.</small>
           </td>
         </tr>
       </table>
