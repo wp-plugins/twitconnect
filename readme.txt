@@ -8,17 +8,17 @@ Stable tag: 1.1
 Integrate Twitter and Wordpress.  Provides single-signon and avatars.
 
 
+Changes in Version 1.1
+
+- Twit Connect can optionally appear on the login page.
+
+
 == Installation ==
 
 1. Upload `twitconnect.php` and all included files to the `/wp-content/plugins/` directory.
 1. Place `<?php if(function_exists('twit_connect')){twit_connect();} ?>` in your comment template or rely on the default `<?php do_action('comment_form', $post->ID); ?>` code.
 1. Activate the plugin through the 'Plugins' menu in WordPress.
 1. Modify plugin options through the `Settings` menu.
-
-
-Changes in Version 1.1
-
-- Twit Connect can optionally appear on the login page.
 
 
 == Change Log ==
