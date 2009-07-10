@@ -11,7 +11,7 @@ Acknowledgments:
   Peter Denton (http://twibs.com/oAuthButtons.php) - 'Signin with Twitter' button
   Jaisen Mathai (http://www.jaisenmathai.com/blog/) - EpiOAuth
   Alexander Morris (http://www.vlogolution.com) - Unique account fix
-Version: 1.1
+Version: 1.11
 ************************************************************************************
 M O D I F I C A T I O N S
 1. 03/23/2009 Shannon Whitley - Initial Release
@@ -31,6 +31,7 @@ M O D I F I C A T I O N S
                                 New button image.
 7. 06/09/2009 Shannon Whitley   Bug fix for suffix not initialized.                             
 8. 07/06/2009 Shannon Whitley   Twit Connect can optionally appear on the login page.
+9. 07/09/2009 Shannon Whitley   Bug fix for missing '=' in login code.
 ************************************************************************************
 ************************************************************************************
 I N S T R U C T I O N S
@@ -175,7 +176,7 @@ function twc_show_twit_connect_button($id='0',$type='comment')
 
     if(is_user_logged_in())
     {
-        if($type='login')
+        if($type == 'login')
         {
             wp_redirect('wp-admin/index.php');
         }
