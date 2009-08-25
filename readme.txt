@@ -2,18 +2,19 @@
 Contributors: swhitley
 Tags: Twitter, comments, login, single signon, avatar, claim
 Requires at least: 2.7.0
-Tested up to: 2.8
-Stable tag: 1.11
+Tested up to: 2.8.4
+Stable tag: 1.5
 
 Integrate Twitter and Wordpress.  Provides single-signon and avatars.
 
-Changes in Version 1.11
+Changes in Version 1.5
 
-- Bug fix for missing '=' in login code.
+- Bug fixes.
+- Javascript redirect. 
+- Fix for cross-domain issues.
+- Can now specify a redirect page after login.
+- Comment field check to prevent loss of comments.
 
-Changes in Version 1.1
-
-- Twit Connect can optionally appear on the login page.
 
 
 == Installation ==
@@ -25,6 +26,17 @@ Changes in Version 1.1
 
 
 == Change Log ==
+
+1.5
+
+08/25/2009 Shannon Whitley
+
+- Bug fixes.
+- Javascript redirect. 
+- Fix for cross-domain issues.
+- Can now specify a redirect page after login.
+- Comment field check to prevent loss of comments.
+
 
 1.11
 

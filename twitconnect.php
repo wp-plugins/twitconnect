@@ -11,7 +11,7 @@ Acknowledgments:
   Peter Denton (http://twibs.com/oAuthButtons.php) - 'Signin with Twitter' button
   Jaisen Mathai (http://www.jaisenmathai.com/blog/) - EpiOAuth
   Alexander Morris (http://www.vlogolution.com) - Unique account fix
-Version: 1.11
+Version: 1.5
 ************************************************************************************
 M O D I F I C A T I O N S
 1. 03/23/2009 Shannon Whitley - Initial Release
@@ -32,6 +32,10 @@ M O D I F I C A T I O N S
 7. 06/09/2009 Shannon Whitley   Bug fix for suffix not initialized.                             
 8. 07/06/2009 Shannon Whitley   Twit Connect can optionally appear on the login page.
 9. 07/09/2009 Shannon Whitley   Bug fix for missing '=' in login code.
+10. 08/25/2009 Shannon Whitley  Changed redirect to javascript. 
+                                Fix for cross-domain issues.
+                                Redirect page after login is configurable.
+                                Comment field check to prevent loss of comments.
 ************************************************************************************
 ************************************************************************************
 I N S T R U C T I O N S
@@ -129,12 +133,14 @@ if($twc_btn_choice == '3')
    $twc_btn_image = $twc_btn_image3;
 }
 
+$twc_redirect = get_option('twc_redirect');
 
 add_action('init', 'twc_init');
 add_filter("get_avatar", "twc_get_avatar",10,4);
 add_action('comment_form', 'twc_show_twit_connect_button');
 add_action("admin_menu", "twc_config_page");
 add_action("wp_head", "twc_wp_head");
+
 if(get_option('twc_add_to_login_page') == 'Y')
 {
     add_action('login_form', 'twc_login_form');
@@ -163,22 +169,20 @@ function twc_wp_head()
 {
     if(is_user_logged_in())
     {
-        if(isset($_GET['oauth_token']))
-        {
-            echo '<script type="text/javascript">window.opener.twc_bookmark("");window.close();</script>';
-        }  
+        echo '<script type="text/javascript">if(window.opener){if(window.opener.document.getElementById("twc_connect")){window.opener.twc_bookmark("");window.close();}}</script>';
     }
 }
 
+
 function twc_show_twit_connect_button($id='0',$type='comment')
 {
-    global $twc_url,$twc_page,$twc_loaded, $twc_template, $twc_login_text, $user_email, $twc_btn_image, $twc_a;
+    global $twc_url,$twc_page,$twc_loaded, $twc_template, $twc_login_text, $user_email, $twc_btn_image, $twc_a, $twc_redirect;
 
     if(is_user_logged_in())
     {
         if($type == 'login')
         {
-            wp_redirect('wp-admin/index.php');
+            echo '<script type="text/javascript">if(window.opener){if(window.opener.document.getElementById("twc_connect")){window.opener.twc_bookmark("");window.close();}}</script>';        
         }
         else
         {
@@ -223,18 +227,37 @@ function twc_show_twit_connect_button($id='0',$type='comment')
     echo '<script type="text/javascript">
     function twc_bookmark(){
        var url=location.href;
-       var temp = url.split("#");
-       url = temp[0];
-       url += "#twcbutton";
-       location.href = url;
-       location.reload();
+       if(url.indexOf("wp-login.php") > 0)
+       {
+           url = "'.$twc_redirect.'";
+           location.href = url;
+       }
+       else
+       {
+           var temp = url.split("#");
+           url = temp[0];
+           url += "#twcbutton";
+           location.href = url;
+           location.reload();
+       }
     }
     if(document.getElementById("twc_connect"))
     {
+        var url = location.href;
+
         var button = document.createElement("button");
         button.id = "twc_button";
         button.setAttribute("class","btn");
-        button.onclick = function(){window.open("'.$twc_url.'/'.$twc_page.'?a="+escape('.$twc_a.')+"&loc="+escape(location.href), "twcWindow","width=800,height=400,left=150,top=100,scrollbar=no,resize=no");return false;};
+        button.onclick = function(){
+            if(document.getElementById("comment"))
+            {
+                if(document.getElementById("comment").value.length > 0)
+                {
+                    alert("The comment field must be blank before you Sign in with Twitter.\r\nPlease copy your comment into a text editor and clear the comment field.");
+                    return false;
+                }
+            }
+            window.open("'.$twc_url.'/'.$twc_page.'?a="+escape('.$twc_a.')+"&twcver=2&loc="+escape(url), "twcWindow","width=800,height=400,left=150,top=100,scrollbar=no,resize=no");return false;};
         button.innerHTML = "<img src=\''.$twc_btn_image.'\' style=\'margin:0;\'>";
         document.getElementById("twc_connect").appendChild(button);}</script>';
 
@@ -407,6 +430,7 @@ function twc_Login($pdvUserinfo) {
   if($wpuid) {
       wp_set_auth_cookie($wpuid, true, false);
       wp_set_current_user($wpuid);
+      wp_redirect($_SESSION['oauth_callback']);
   }
 }
 
@@ -454,8 +478,9 @@ function twitconnect_configuration()
             update_option('twc_use_twitter_profile', $_POST["twc_use_twitter_profile"]);
             update_option('twc_add_to_login_page', $_POST["twc_add_to_login_page"]);            
             update_option('twc_user_login_suffix', $_POST["twc_user_login_suffix"]);
+            update_option('twc_redirect', $_POST["twc_redirect"]);
             $secret_file = dirname(__FILE__).'/secret.php';
-            $fh = fopen($secret_file, 'w') or die("Can't open secret file");
+            $fh = fopen($secret_file, 'w') or die("Can't open secret file.  Please change the permissions to the files in the Twit Connect plugin directory to allow write access.");
             $stringData = '<?php'."\n";
             $stringData .= '$consumer_key = \''.stripslashes($_POST["twc_consumer_key"]).'\';'."\n";
             $stringData .= '$consumer_secret = \''.stripslashes($_POST["twc_consumer_secret"]).'\';'."\n";
@@ -470,6 +495,12 @@ function twitconnect_configuration()
         $twc_btn_choice = get_option('twc_btn_choice');
         $twc_local = get_option('twc_local');
         $twc_user_login_suffix = get_option('twc_user_login_suffix');                                
+        $twc_redirect = get_option('twc_redirect');                                        
+        if(empty($twc_redirect))
+        {
+            $twc_redirect = 'wp-admin/index.php';
+            update_option('twc_redirect',$twc_redirect);
+        }
         $twc_template_temp = $twc_template;
         $twc_template = get_option('twc_template');
         if(strlen($twc_template) == 0)
@@ -582,6 +613,15 @@ function twitconnect_configuration()
             <small>The text that appears above the Twit Connect button on the login page.</small>
           </td>
         </tr>
+   <tr>
+          <td valign="top">Redirect After Login</td>
+          <td>
+            <input type='text' name='twc_redirect' value='<?php echo $twc_redirect ?>' size="50" />
+            <br/>
+            <small>The user will be taken to this address after a successful login.  This is only applied to the Login Page.</small>
+          </td>
+        </tr>
+        
       </table>
       <p class="submit">
         <input class="button-primary" type='submit' name='twc_save' value='Save Settings' />

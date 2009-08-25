@@ -12,18 +12,8 @@ $loc = $_GET['loc'];
 $uri = explode('#',$loc);
 $url = $uri[0];
 
-if(strpos($url,'?') === false)
-{
-    $url .= '?';
-}
-else
-{
-    $url .= '&';
-}
+$_SESSION['oauth_callback'] = $url;
 
-$url .= 'oauth_token=oauth_token_replacement#twcbutton';
-
-
-header('Location:'.$twitterObj->getAuthorizationUrl() . '&oauth_callback='.urlencode($_GET['a'].'?a='.urlencode($url)));
+header('Location:'.$twitterObj->getAuthorizationUrl());
 
 ?>
