@@ -11,7 +11,7 @@ Acknowledgments:
   Peter Denton (http://twibs.com/oAuthButtons.php) - 'Signin with Twitter' button
   Jaisen Mathai (http://www.jaisenmathai.com/blog/) - EpiOAuth
   Alexander Morris (http://www.vlogolution.com) - Unique account fix
-Version: 1.50
+Version: 1.51
 ************************************************************************************
 M O D I F I C A T I O N S
 1. 03/23/2009 Shannon Whitley - Initial Release
