@@ -2,18 +2,19 @@
 Contributors: swhitley
 Tags: Twitter, comments, login, single signon, avatar, claim, buddypress, @anywhere, tweet button
 Requires at least: 2.7.0
-Tested up to: 3.0.4
-Stable tag: 2.57
+Tested up to: 3.2.1
+Stable tag: 2.59
 
-Integrate Twitter and Wordpress.  Provides single-signon and avatars.  Includes Twitter's @anywhere: hovercards, follow button, tweetbox, and tweet button.
+Integrate Twitter and Wordpress.  Provides single-signon and avatars.  Includes Twitter's @anywhere: hovercards, follow button, Web Intents, and tweet button.
 Tweet Quotes - Use [tweet] tags to format tweets from search.twitter.com.
+User Stats - See how many users have registered through Twit Connect.
 
 Compatible with BuddyPress.
 
-Changes in Version 2.57
+Changes in Version 2.59
 
-- Using oAuth callback instead of wp_redirect.  Fixes issue for some users who reported 'Cannot modify header information...' warning messages.
-
+- Converted the @anywhere Tweetbox to a Web Intent.
+- Added a stats tab to track the number of registered Twitter users.
 
 
 == Installation ==
@@ -25,6 +26,16 @@ Changes in Version 2.57
 
 
 == Change Log ==
+
+2.59
+10/4/2011
+- Converted the @anywhere Tweetbox to a Web Intent.
+- Added a stats tab to track the number of registered Twitter users.
+
+
+2.57
+- Using oAuth callback instead of wp_redirect.  Fixes issue for some users who reported 'Cannot modify header information...' warning messages.
+
 
 2.56
 11/5/2010

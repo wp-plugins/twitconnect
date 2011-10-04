@@ -11,7 +11,7 @@ Acknowledgments:
   Peter Denton (http://twibs.com/oAuthButtons.php) - 'Signin with Twitter' button
   Abraham Williams (http://github.com/abraham/twitteroauth/) - TwitterOAuth
   Alexander Morris (http://www.vlogolution.com) - Unique account fix
-Version: 2.57
+Version: 2.59
 ************************************************************************************
 M O D I F I C A T I O N S
 1. 03/23/2009 Shannon Whitley - Initial Release
@@ -43,6 +43,7 @@ M O D I F I C A T I O N S
                                 Login redirect to profile option.
                                 Multiple buttons on a single page.
 13. 01/20/2011 Shannon Whitley  Use oAuth callback.  No longer need wp_redirect.
+14. 10/04/2011 Shannon Whitley  Converted Tweetbox to Intent. Added Stats.
 ************************************************************************************
 ************************************************************************************
 I N S T R U C T I O N S
@@ -121,7 +122,7 @@ if($twc_local == 'Y')
 }
 else
 {
-    $twc_url = 'http://mytweeple.com';
+    $twc_url = 'http://contax.io';
     $twc_page = 'twc.aspx?f=1';
     $twc_a = 'location.href+"#twcbutton"';
 }
@@ -129,6 +130,7 @@ else
 $twc_profile_images = '';
 $twc_loaded = false;
 $twc_tweet_button = get_option('twc_tweet_button');  
+$twc_at_anywhere_tweetbox = get_option('twc_at_anywhere_tweetbox');
 
 
 //************************************************************************************
@@ -136,7 +138,7 @@ $twc_tweet_button = get_option('twc_tweet_button');
 //************************************************************************************
 function twc_init()
 {
-    global $twc_tweet_button, $user_email;
+    global $twc_tweet_button, $user_email, $twc_at_anywhere_tweetbox;
    
     if(!is_user_logged_in())
     {
@@ -160,13 +162,14 @@ function twc_init()
     {
 	    if ( isset($_GET['page']) ) {
   	        $plugin_page = stripslashes($_GET['page']);
-      	    $plugin_page = plugin_basename($plugin_page);
+       	        $plugin_page = plugin_basename($plugin_page);
 	        if($plugin_page == 'twitconnect/twitconnect.php')
 	        {
  		        wp_enqueue_script('jquery');
-    	        wp_enqueue_script('jquery-ui-core');
-    	        wp_enqueue_script('jquery-ui-tabs');
+    	                wp_enqueue_script('jquery-ui-core');
+    	                wp_enqueue_script('jquery-ui-tabs');
 		        wp_enqueue_style('jquery-ui','http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.4/themes/base/jquery-ui.css');
+    	                wp_enqueue_script('google-jsapi', 'https://www.google.com/jsapi');
 	        }
     	}
     }
@@ -176,7 +179,7 @@ function twc_init()
         $twc_consumer_key = get_option('twc_consumer_key');
         wp_enqueue_script( 'at_anywhere', 'http://platform.twitter.com/anywhere.js?id='.$twc_consumer_key.'&v=1');
     }
-    if($twc_tweet_button == 'Y')
+    if($twc_tweet_button == 'Y' || $twc_at_anywhere_tweetbox == 'Y')
     {
         wp_enqueue_script( 'twitter_widgets', 'http://platform.twitter.com/widgets.js');
     }
@@ -206,26 +209,16 @@ function twc_login_form()
 
 function twc_comment_form()
 {
-    global $post_ID;
+    global $post_ID, $twc_at_anywhere_tweetbox;
     twc_show_twit_connect_button();
     
-    $twc_at_anywhere_tweetbox = get_option('twc_at_anywhere_tweetbox');
     if($twc_at_anywhere_tweetbox == 'Y')
     {
         $permalink = get_permalink($post_ID);
 		$post_title = strip_tags(get_the_title( $post_ID ));
 		$blog_title = get_bloginfo('name');
-        echo '<div><span id="twc_at_anywhere_tweetbox"></span></div>
-            <script type="text/javascript">
-                twttr.anywhere("1", function (twitter) {
-                    twitter("#twc_at_anywhere_tweetbox").tweetBox({
-                        height: 100,
-                        width: 400,
-                        label: "Tweet about this post:",
-                        defaultContent: "\"'.$post_title.'\" ('.$blog_title.') '.$permalink.'"';
-        echo '           });
-                });
-            </script>';
+        echo '<img src="'.WP_PLUGIN_URL.'/twitconnect/images/images/bird_16_blue.png" alt="Twitter"/> ';
+        echo '<a href="https://twitter.com/intent/tweet?text='.urlencode('"'.$post_title.'" ('.$blog_title.') '.$permalink).'">Tweet This</a>';
     }
 
 }
@@ -299,7 +292,7 @@ function twc_show_twit_connect_button($id='0',$type='comment')
             {
                 echo '<p class="twc-tweet-this"><input type="checkbox" id="twc_tweet_this" name="twc_tweet_this" style="width:auto" /> Tweet This Comment [<a href="javascript:none" title="Post this comment to Twitter">?</a>]</p>';
             }
-            echo '<p>Update your e-mail address: <a href="./wp-admin/profile.php" name="twcbutton">'.$user_email.'</a></p>';
+            echo '<p>Update your email address: <a href="./wp-admin/profile.php" name="twcbutton">'.$user_email.'</a></p>';
             echo '<script type="text/javascript">'."\r\n";
             echo '<!--'."\r\n";
             echo 'window.onload=function(){if(!window.opener && document.getElementById("comment")){'."\r\n";
@@ -960,6 +953,38 @@ function twc_Login($pdvUserinfo) {
 }
 
 //************************************************************************************
+//* twc_get_twitter_user_7day
+//* Get total Twitter users by day for past seven days.
+//************************************************************************************
+function twc_get_user_7day() {
+  global $wpdb, $twc_user_login_suffix;
+  $sql = "SELECT count(*) as cnt,concat(Month(user_registered),'-',Day(user_registered)) as dy FROM $wpdb->users WHERE user_login like '%%%s' and user_registered >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) group by 2 order by user_registered";
+  return $wpdb->get_results($wpdb->prepare($sql, $twc_user_login_suffix));
+}
+
+
+//************************************************************************************
+//* twc_get_user_count
+//* Get total number of users.
+//************************************************************************************
+function twc_get_user_count() {
+  global $wpdb, $twc_user_login_suffix;
+  $sql = "SELECT count(*) FROM $wpdb->users WHERE user_login not like '%%%s'";
+  return $wpdb->get_var($wpdb->prepare($sql, $twc_user_login_suffix));
+}
+
+//************************************************************************************
+//* twc_get_twitter_user_count
+//* Get number of Twitter users.
+//************************************************************************************
+function twc_get_twitter_user_count() {
+  global $wpdb, $twc_user_login_suffix;
+  $sql = "SELECT count(*) FROM $wpdb->users WHERE user_login like '%%%s'";
+  return $wpdb->get_var($wpdb->prepare($sql, $twc_user_login_suffix));
+}
+
+
+//************************************************************************************
 //* twc_get_user_by_meta
 //************************************************************************************
 function twc_get_user_by_meta($meta_key, $meta_value) {
@@ -1005,7 +1030,7 @@ function twc_get_domain()
 function twc_get_buttons()
 {
     global $twc_btn_images;
-    
+
     $path = WP_PLUGIN_DIR.'/twitconnect/images/';
     $uri = WP_PLUGIN_URL.'/twitconnect/images/';
     $handle=opendir($path);
@@ -1068,7 +1093,7 @@ function twc_TweetQuote($text)
     $screen_name = "";
     $tweet = "";
     $new_text = "";
-    $tweets = explode('·', $text);
+    $tweets = explode('ï¿½', $text);
     foreach($tweets as $tweet)
     {
         $new_tweet = "";    
@@ -1339,14 +1364,20 @@ KEEPME4;
 <div id="twc_tabs"> 
 	<ul> 
 		<li><a href="#twc_tab1">Connection Type</a></li> 
-		<li><a href="#twc_tab2">@anywhere</a></li> 
+		<li><a href="#twc_tab2">@anywhere, Intents, & Widgets</a></li> 
 		<li><a href="#twc_tab3">General Settings</a></li> 
 		<li><a href="#twc_tab4">Comment Configuration</a></li> 
 		<li><a href="#twc_tab5">Login Configuration</a></li> 		
+		<li><a href="#twc_tab6">Stats</a></li> 		
 	</ul>     
 
 <div id="twc_tab1">	
       <table cellspacing="20" width="80%">
+       <tr><td valign="top">About Hosting</td><td><p>Twit Connect runs in two modes: [Contaxio] Hosted and Self-Hosted.<br/>
+We prefer that you self-host Twit Connect (see the checkbox and instructions below).  Self-hosting allows you to brand the Twitter signon page and provides you with the most control over your site.</p>
+<p>
+If you cannot self-host, hosting will be provided for you through Contaxio.  Contaxio is a social media contact management service.  Please try Contaxio at <a href="http://contax.io" target="_blank">http://contax.io</a>.
+<br/><a href="http://contax.io" target="_blank"><img src="<?php echo  WP_PLUGIN_URL.'/twitconnect/images/images/contaxio.jpg" alt="Twitter"/></a> ';?></p></td></tr>
         <tr>
         <td valign="top">Self-Hosted Application</td>
         <td>
@@ -1357,7 +1388,7 @@ KEEPME4;
             <?php echo $twc_local ?>/></td><td valign="top">
             <small>Check this box to use your own Consumer Key and Consumer Secret.</small>
             <br/><small>For this option, you must register a new application at <a href="http://dev.twitter.com/apps/new">Twitter.com</a>.  Enter the url for your blog in the Application Website and Callback URL.</small>
-            <br/><small>Help in filling out the registration can be found on the <a href="http://www.voiceoftech.com/swhitley/?page_id=706">Twit Connect</a> page.</small>
+            <br/>
             </td></tr></table>
           </td>
         </tr>
@@ -1379,6 +1410,15 @@ KEEPME4;
                 </small>
           </td>
         </tr>
+<tr>
+<td>
+</td>
+<td>
+If you like this plugin, please buy me a beer, and feel free to say "hi" at <a href="http://voiceoftech.com" target="_blank">http://voiceoftech.com</a>.<br/><br/>
+<a href="https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=7XEMZEF39AHZ4" target="_blank"><img src="https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif" border="0" alt="PayPal - The safer, easier way to pay online!"></a>
+
+</td>
+</tr>
         </table>
 <?php else: ?>                
 PHP Version 5 or greater is required for the self-hosted option.  Click the General Settings tab to continue.
@@ -1421,13 +1461,13 @@ PHP Version 5 or greater is required for the self-hosted option.  Click the Gene
           </td>
         </tr>
         <tr>
-          <td width="20%" valign="top">Tweetbox</td>
+          <td width="20%" valign="top">'Tweet This' Link</td>
           <td>
         <table>
         <tr><td valign="top" width="5%">
           <input type='checkbox' name='twc_at_anywhere_tweetbox' value='Y' 
             <?php echo $twc_at_anywhere_tweetbox ?>/></td><td valign="top">
-            <small>Add a Twitter tweet box below the comment form.</small>
+            <small>Adds a link below the comment form that will popup a Twitter status update box.</small>
             </td></tr></table>
           </td>
         </tr>
@@ -1462,11 +1502,11 @@ PHP Version 5 or greater is required.
           </td>
         </tr>
         <tr>
-          <td width="20%" valign="top">Default E-mail Address</td>
+          <td width="20%" valign="top">Default Email Address</td>
           <td>
             <input type='text' name='twc_email_default' value='<?php echo $twc_email_default ?>' size="50" />
                  <br/><small>
-                  Enter a default e-mail address for new users.  %%username%% will be replaced with the user's Twitter name.  Use a valid e-mail domain to avoid issues with spam filtering plugins (such as Akismet).
+                  Enter a default email address for new users.  %%username%% will be replaced with the user's Twitter name.  Use a valid email domain to avoid issues with spam filtering plugins (such as Akismet).
                 </small>
           <?php
             $sql = "SELECT user_email FROM $wpdb->users WHERE user_email = 'nomail@nomail.com' limit 1";
@@ -1476,7 +1516,7 @@ PHP Version 5 or greater is required.
                 <br/><br/>
                 <h4>One-time Conversion</h4>
                 <input class="button-primary" type="submit" name='twc_nomail_update' value='Convert' /><br/>
-                <small>Convert all nomail@nomail.com addresses to your new default e-mail format.</small><br/><br/>
+                <small>Convert all nomail@nomail.com addresses to your new default email format.</small><br/><br/>
           <?php
             endif;
           ?>
@@ -1513,6 +1553,7 @@ PHP Version 5 or greater is required.
             <?php echo $twc_btn_choice == $twc_btn_image ? ' checked="checked" ' : ' '; ?>/></td>
             <td><img src="<?php echo $twc_btn_image ?>" alt="" /></td></tr>
         <?php endforeach; ?>
+            <tr><td colspan='2'>Drop an image into the plugin's "images" directory and it will appear here.</td></tr>
             </table>
           </td>
         </tr>
@@ -1585,7 +1626,7 @@ PHP Version 5 or greater is required.
           <table><tr valign="top"><td width="5%">
           <input type='checkbox' name='twc_comment_redirect' value='Y' 
             <?php echo get_option('twc_comment_redirect') == 'Y' ? ' checked="checked" ' : ' '; ?>/></td><td>
-            <small>If the e-mail address has not been changed, redirect the user to the profile page following a login.</small>
+            <small>If the email address has not been changed, redirect the user to the profile page following a login.</small>
             </td></tr></table>
           </td>
         </tr>
@@ -1633,6 +1674,69 @@ PHP Version 5 or greater is required.
           </td>
    </tr>
    </table>
+   </div>
+   <div id="twc_tab6">
+<div id="chart_div" style="width:400; height:300"></div>
+<div id="barchart_div" style="width:400; height:300"></div>
+    <script type="text/javascript">
+      // Load the Visualization API and the piechart package.
+      google.load('visualization', '1.0', {'packages':['corechart']});
+      // Set a callback to run when the Google Visualization API is loaded.
+      google.setOnLoadCallback(drawChart);
+
+      // Callback that creates and populates a data table, 
+      // instantiates the pie chart, passes in the data and
+      // draws it.
+      function drawChart() {
+
+      // Create the data table.
+      var data = new google.visualization.DataTable();
+      data.addColumn('string', 'Users');
+      data.addColumn('number', 'Count');
+
+      data.addRows([
+        ['Twitter Users', <?php echo twc_get_twitter_user_count() ?>],
+        ['Other Users', <?php echo twc_get_user_count() ?>]
+      ]);
+
+      // Set chart options
+      var options = {'title':'Total User Registration',
+                     'width':400,
+                     'height':300,
+		     'pieSliceText': 'value'};
+
+      // Instantiate and draw our chart, passing in some options.
+      var chart = new google.visualization.PieChart(document.getElementById('chart_div'));
+      chart.draw(data, options);
+
+
+
+      data = new google.visualization.DataTable();
+        data.addColumn('string', 'Users');
+        data.addColumn('number', 'Day');
+<?php
+$days = twc_get_user_7day();
+
+if(!empty($days))
+{
+	echo 'data.addRows('.count($days).');';
+$cnt = 0;
+     foreach( $days as $row ) 
+    {
+         echo 'data.setValue('.$cnt.',0,"'.$row->dy.'");';
+         echo 'data.setValue('.$cnt.',1,'.$row->cnt.');';
+         $cnt++;
+    }
+}
+ ?>
+
+        var chart = new google.visualization.ColumnChart(document.getElementById('barchart_div'));
+        chart.draw(data, {width: 400, height: 240, title: 'Daily Twitter User Registration (Past 7 Days)',
+                          hAxis: {'Day': 'Count', titleTextStyle: {color: 'red'}}
+                         });
+
+    }
+    </script>
    </div>
    </div>
       <p class="submit">
