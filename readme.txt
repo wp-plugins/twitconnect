@@ -5,6 +5,8 @@ Requires at least: 2.7.0
 Tested up to: 3.2.1
 Stable tag: 2.59
 
+[Warning:  This plugin is no longer actively supported.]
+
 Integrate Twitter and Wordpress.  Provides single-signon and avatars.  Includes Twitter's @anywhere: hovercards, follow button, Web Intents, and tweet button.
 Tweet Quotes - Use [tweet] tags to format tweets from search.twitter.com.
 User Stats - See how many users have registered through Twit Connect.
