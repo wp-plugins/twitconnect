@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /*
 Plugin Name: Twit Connect
 Author:  Shannon Whitley 
@@ -11,7 +11,7 @@ Acknowledgments:
   Peter Denton (http://twibs.com/oAuthButtons.php) - 'Signin with Twitter' button
   Abraham Williams (http://github.com/abraham/twitteroauth/) - TwitterOAuth
   Alexander Morris (http://www.vlogolution.com) - Unique account fix
-Version: 2.59
+Version: 2.6
 ************************************************************************************
 M O D I F I C A T I O N S
 1. 03/23/2009 Shannon Whitley - Initial Release
@@ -44,6 +44,7 @@ M O D I F I C A T I O N S
                                 Multiple buttons on a single page.
 13. 01/20/2011 Shannon Whitley  Use oAuth callback.  No longer need wp_redirect.
 14. 10/04/2011 Shannon Whitley  Converted Tweetbox to Intent. Added Stats.
+15. 04/06/2013 Shannon Whitley  Updated for Version Twitter API 1.1
 ************************************************************************************
 ************************************************************************************
 I N S T R U C T I O N S
@@ -690,7 +691,7 @@ function twc_oAuth_Start()
     
     /* Create TwitterOAuth object with app key/secret */
     $to = new TwitterOAuth($twc_consumer_key, $twc_consumer_secret);
-    $to->format = 'xml';
+    $to->format = 'json';
     
     
     /* Request tokens from twitter */
@@ -715,25 +716,28 @@ function twc_oAuth_Confirm()
     
     /* Create TwitterOAuth object with app key/secret and token key/secret from default phase */
     $to = new TwitterOAuth($twc_consumer_key, $twc_consumer_secret, $_SESSION['oauth_request_token'], $_SESSION['oauth_request_token_secret']);
-    $to->format = 'xml';
+    $to->format = 'json';
     /* Request access tokens from twitter */
-    $tok = $to->getAccessToken();
+    //4/6/2013 - Added verifier.
+    $tok = $to->getAccessToken($_REQUEST['oauth_verifier']);
 
     /* Save the access tokens. Normally these would be saved in a database for future use. */
     $_SESSION['oauth_access_token'] = $tok['oauth_token'];
     $_SESSION['oauth_access_token_secret'] = $tok['oauth_token_secret'];
 
     $to = new TwitterOAuth($twc_consumer_key, $twc_consumer_secret, $_SESSION['oauth_access_token'], $_SESSION['oauth_access_token_secret']);
-    $to->format = 'xml';
+    $to->format = 'json';
     /* Run request on twitter API as user. */
-    $xml = $to->get('account/verify_credentials');
-    
-    $twitterInfo = new SimpleXMLElement($xml);
- 
+    $json = $to->get('account/verify_credentials');
+
+    $twitterInfo = $json;
+
     $id = $twitterInfo->id;
     $screen_name = $twitterInfo->screen_name;
     $name = $twitterInfo->name;
     $url = $twitterInfo->url;
+
+	
     twc_Login($id.'|'.$screen_name.'|'.$name.'|'.$url);
 }
 
@@ -838,7 +842,7 @@ function twc_comment_post($comment_ID)
                 /* Create TwitterOAuth with app key/secret and user access key/secret */
                 $to = new TwitterOAuth($twc_consumer_key, $twc_consumer_secret, $_SESSION['oauth_access_token'], $_SESSION['oauth_access_token_secret']);
                 /* Run request on twitter API as user. */
-                $to->format = 'xml';
+                $to->format = 'json';
                 $content = $to->post('statuses/update', array('status' => $tweet));
             }
             else
@@ -1093,7 +1097,7 @@ function twc_TweetQuote($text)
     $screen_name = "";
     $tweet = "";
     $new_text = "";
-    $tweets = explode('�', $text);
+    $tweets = explode('?', $text);
     foreach($tweets as $tweet)
     {
         $new_tweet = "";    
